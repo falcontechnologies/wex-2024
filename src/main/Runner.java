@@ -1,9 +1,11 @@
 package main;
 
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -13,7 +15,8 @@ import java.util.Collections;
 import java.util.zip.GZIPInputStream;
 
 public class Runner {
-
+	
+	//Copy into filesToDownload in case of --all arg
 	static String[] allFiles = {
 		    "themes.csv.gz",
 		    "colors.csv.gz",
@@ -32,6 +35,8 @@ public class Runner {
 	public static void main(String[] args) {
 		
 		ArrayList<String> filesToDownload;
+		
+		//First, parse the launch arguments
 		if (args.length != 0 ) {
 			filesToDownload = ParseLaunchArgs(args);
 		}else {
@@ -39,19 +44,22 @@ public class Runner {
 			Collections.addAll(filesToDownload, allFiles);
 		}
 		 
+		//Second, ensure the place we're downloading to exists
 		File directoire = new File("cache/");
 		if (!directoire.exists())
 		{
 			System.out.println("Creating new cache directory...");
 		    directoire.mkdirs();
 		}
+		
+		//Third, start downloading
 		System.out.println("Now downloading files...");
 		int filesDownloaded = 0;
 		for (String file : filesToDownload)
 		{
 				//First things first, verify whether we already have the file and their dates modified
 				String fileUrl = "https://cdn.rebrickable.com/media/downloads/" + file;
-				String cachedDirectory = "cache/"+ file.substring(0,file.length()-3);
+				String cachedDirectory = "cache/"+ file.substring(0,file.length()-3); //cut off the .gz at the end
 				long NetDateModified = 0;
 				try {
 					 NetDateModified = new URL(fileUrl).openConnection().getLastModified();
@@ -59,14 +67,15 @@ public class Runner {
 					System.out.println("Couldn't find " + file + " in Rebrickable's CDN. Skipping...");
 					continue;
 				}
+				
+				//Second, check the net modification date against the local modification date and download based on that
 				File cachedFile = new File(cachedDirectory);
 				if(cachedFile.exists())
 				{
 					if(cachedFile.lastModified() < NetDateModified)
 					{
 						System.out.println("Updating " + file + "...");
-						DownloadFile(fileUrl,"cache/"+ file);
-						filesDownloaded++;
+						filesDownloaded += (DownloadFile(fileUrl,"cache/"+ file) ? 1 : 0); 
 						UnzipFile(cachedDirectory);
 					}else {
 						System.out.println("File " + cachedDirectory + " already up to date. Skipping...");
@@ -74,29 +83,31 @@ public class Runner {
 					
 				}else {
 					System.out.println("Downloading " + file + "...");
-					DownloadFile(fileUrl,"cache/"+ file);
-					filesDownloaded++;
+					filesDownloaded += (DownloadFile(fileUrl,"cache/"+ file) ? 1 : 0); 
 					UnzipFile(cachedDirectory);
 				}
 			
 				
 		}
 		
+		//Lastly, print a report of what files were downloaded and what files were skipped.
 		System.out.println("Complete: " + Integer.toString(filesDownloaded) + " files downloaded, " 
 		+ Integer.toString(filesToDownload.size() - filesDownloaded) + " files skipped.");
 		
 		
 	}
 	
-	static void DownloadFile(String url, String outpath)
+	static boolean DownloadFile(String url, String outpath)
 	{
 		try {
 			URL site = new URL(url);
 			Files.copy(site.openStream(), Paths.get(outpath), StandardCopyOption.REPLACE_EXISTING);
+			return true;
 			
 		}catch(Exception e)
 		{
 			System.out.println("Failed to download file @ \"" + url +   "\". Skipping...");
+			return false;
 		}
 	}
 	
@@ -123,7 +134,7 @@ public class Runner {
 		}
 	}
 
-	static ArrayList<String> ParseLaunchArgs(String[] args)
+	static ArrayList<String> ParseLaunchArgs(String[] args) //this looks like prime control spaghetti inside my editor. Isn't there a better way to do this?
 	{
 		ArrayList<String> getter = new ArrayList<String>();
 		boolean cont = true;
@@ -138,17 +149,29 @@ public class Runner {
 					try {
 						getter.add(args[i+1] + ".gz");
 					}catch(Exception e) {
-						System.out.println("FATAL: Bad launch arguments. Program will now quit.");
+						System.out.println("FATAL: Bad launch arguments. Program will now exit.");
 						System.exit(1);
 					}
-					
+						
 				}else if (args[i].equals("--all")) {
 					Collections.addAll(getter, allFiles);
 				}else if (args[i].equals("--conf"))
 				{
-					return getter;
+					try {
+						BufferedReader reader = new BufferedReader(new FileReader(args[i+1]));
+						String line = reader.readLine();
+						while (line != null)
+						{
+							getter.add(line + ".gz");
+							line = reader.readLine();
+						}
+						reader.close();
+					}catch(Exception e) {
+						System.out.println("FATAL: Could not find config file. Program will now exit.");
+					}
+					
 				} else {
-					System.out.println("FATAL: Bad launch arguments. Program will now quit.");
+					System.out.println("FATAL: Bad launch arguments. Program will now exit.");
 					System.exit(1);
 				}
 				
