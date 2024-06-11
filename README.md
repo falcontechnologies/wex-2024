@@ -1,11 +1,12 @@
 # wex-2024
 Work experience 2024
-#Rebrickable Downloader#
+# Rebrickable Downloader
 
-##Usage
+## Usage
 ''java Fetch_files5.java [arguments]
 
-###Arguments
+### Arguments
+
 ''java Fetch_files5.java --all'' used to download all files from the rebrickable dataset
  
 ''java Fetch_files5.java -f [file_name]''
