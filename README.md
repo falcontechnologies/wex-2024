@@ -6,8 +6,8 @@ Work experience 2024
 ''java Fetch_files5.java [arguments]
 
 ###Arguments
-####''java Fetch_files5.java --all''
-#### used to download all files from the rebrickable dataset
+''java Fetch_files5.java --all'' used to download all files from the rebrickable dataset
+ 
 ####''java Fetch_files5.java -f [file_name]''
 #### used to download specific file from rebrickable dataset
 
